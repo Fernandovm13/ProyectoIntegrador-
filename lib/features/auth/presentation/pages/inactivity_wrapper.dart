@@ -33,7 +33,6 @@ class _InactivityWrapperState extends State<InactivityWrapper> {
 
   void _handleInactivity() async {
     final timestamp = DateTime.now().toIso8601String();
-    // Save mock token and the inactivity timestamp in the secure storage
     await SecureStorageService.saveSessionData(
       'secure_token_session_inactive_777',
       timestamp,
