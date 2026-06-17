@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/security/screen_protection_service.dart';
 import '../../../../core/security/secure_storage_service.dart';
 import '../../../../core/security/fcm_service.dart';
+import '../../../../core/security/usb_debugging_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -19,6 +20,7 @@ class _LoginPageState extends State<LoginPage> {
   final _addressController = TextEditingController();
 
   bool _isLoading = true;
+  bool _isBlocked = false;
   String? _fcmToken;
 
   @override
@@ -57,8 +59,19 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _initializeSecurityAndData() async {
-    await ScreenProtectionService.enable();
-    
+    final isUsbDebuggingEnabled = await UsbDebuggingService.isUsbDebuggingEnabled();
+    if (isUsbDebuggingEnabled) {
+      if (mounted) {
+        setState(() {
+          _isBlocked = true;
+          _isLoading = false;
+        });
+        _showBlockingDialog();
+      }
+      return;
+    }
+
+
     final data = await SecureStorageService.getSensitiveUserData();
     final hasSensitiveData = data.values.any((value) => value != null);
     if (!hasSensitiveData) {
@@ -71,6 +84,41 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       _isLoading = false;
     });
+  }
+
+  void _showBlockingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.security, color: Colors.red),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text('Bloqueo de Seguridad'),
+                ),
+              ],
+            ),
+            content: const Text(
+              'Se ha detectado que la Depuración USB está activa. '
+              'Por políticas de seguridad de la aplicación, debe desactivar esta opción en los ajustes del sistema para poder continuar.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  SystemNavigator.pop();
+                },
+                child: const Text('Cerrar Aplicación', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _loadDataAndToken() async {
@@ -89,6 +137,38 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isBlocked) {
+      return Scaffold(
+        backgroundColor: Colors.grey.shade900,
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.block, size: 80, color: Colors.redAccent),
+                SizedBox(height: 16),
+                Text(
+                  'Entorno no seguro',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'La aplicación está bloqueada por políticas de seguridad.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),

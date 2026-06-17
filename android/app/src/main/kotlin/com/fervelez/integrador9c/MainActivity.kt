@@ -40,6 +40,22 @@ class MainActivity : FlutterActivity() {
                 result.notImplemented()
             }
         }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "usb_debugging_channel"
+        ).setMethodCallHandler { call, result ->
+            if (call.method == "isUsbDebuggingEnabled") {
+                val adbEnabled = android.provider.Settings.Global.getInt(
+                    contentResolver,
+                    android.provider.Settings.Global.ADB_ENABLED,
+                    0
+                ) > 0
+                result.success(adbEnabled)
+            } else {
+                result.notImplemented()
+            }
+        }
     }
 
     private fun hasLocationPermission(): Boolean {
