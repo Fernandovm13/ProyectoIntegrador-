@@ -6,9 +6,9 @@ class UsbDebuggingService {
 
   static Future<bool> isUsbDebuggingEnabled() async {
     // Exclude local debug mode so developers can compile/run the app
-    // if (kDebugMode) {
-    // return false;
-    // }
+    if (kDebugMode) {
+      return false;
+    }
     
     try {
       final bool isEnabled = await _channel.invokeMethod('isUsbDebuggingEnabled');
